@@ -6,7 +6,7 @@ const mode = process.env.NODE_ENV || 'development'
 
 export default defineConfig({
   html: {
-    title: 'Prototype',
+    title: 'PoC for editor framework with classes',
   },
   output: {
     assetPrefix: '/rsbuild-react-bun-biome-starter-template/',
