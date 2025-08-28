@@ -1,5 +1,5 @@
-import { defineConfig } from '@rsbuild/core'
-import { pluginReact } from '@rsbuild/plugin-react'
+import {defineConfig} from '@rsbuild/core'
+import {pluginReact} from '@rsbuild/plugin-react'
 
 // @ts-expect-error This file is run in a Node.js environment
 const mode = process.env.NODE_ENV || 'development'
@@ -9,7 +9,7 @@ export default defineConfig({
     title: 'PoC for editor framework with classes',
   },
   output: {
-    assetPrefix: '/rsbuild-react-bun-biome-starter-template/',
+    assetPrefix: '/2025-08-25-editor-with-classes/',
     sourceMap: {
       js: mode === 'development' ? 'eval-source-map' : 'source-map',
       css: true,
