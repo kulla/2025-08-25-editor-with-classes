@@ -96,7 +96,7 @@ abstract class EditorNode<
   }
 }
 
-class TextNode<L extends NodeLifecycle> extends EditorNode<
+class TextNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
   L,
   {
     type: 'text'
@@ -109,7 +109,7 @@ class TextNode<L extends NodeLifecycle> extends EditorNode<
   }
 }
 
-class RootNode<L extends NodeLifecycle> extends EditorNode<
+class RootNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
   L,
   {
     type: 'root'
