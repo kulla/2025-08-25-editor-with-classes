@@ -18,7 +18,7 @@ abstract class EditorNode<
   P extends string | null = string | null,
 > {
   constructor(
-    protected _state: EditorState,
+    protected state: EditorState,
     protected _key: Key,
   ) {
     invariant(
@@ -40,7 +40,7 @@ abstract class EditorNode<
   }
 
   get entry(): Entry<this> {
-    return this._state.get(this.key)
+    return this.state.get(this.key)
   }
 
   get parentKey(): P {
