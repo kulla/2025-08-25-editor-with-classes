@@ -12,25 +12,48 @@ export default function App() {
   )
 }
 
+type NodeLifecycle = NodeFields['lifecycle']
+type NodeFields =
+  | DetachedFields
+  | ReadonlyFields<EditorNode>
+  | WritableFields<EditorNode>
+
+interface DetachedFields {
+  readonly lifecycle: 'detached'
+  readonly state: WriteableState
+}
+
+interface ReadonlyFields<N extends EditorNode> {
+  readonly lifecycle: 'readonly'
+  readonly key: Key<N>
+  readonly state: ReadonlyState
+}
+
+interface WritableFields<N extends EditorNode> {
+  readonly lifecycle: 'writable'
+  readonly key: Key<N>
+  readonly state: WriteableState
+}
+
+function isStored<N extends EditorNode>(
+  node: N,
+): node is N & EditorNode<'readonly' | 'writable'> {
+  return node.lifecycle !== 'detached'
+}
+
 abstract class EditorNode<
+  L extends NodeLifecycle = NodeLifecycle,
   Description extends {
     readonly type: string
     readonly value: object | string | number | boolean
     readonly parentKey: string | null
+  } = {
+    type: string
+    value: object | string | number | boolean
+    parentKey: string | null
   },
 > {
-  protected readonly state: EditorState
-  protected readonly key: Key<this>
-
-  constructor(state: EditorState, key: Key) {
-    invariant(
-      isKeyType(this.type as Type<this>, key),
-      `Key ${key} is not of type ${this.type}`,
-    )
-
-    this.state = state
-    this.key = key
-  }
+  constructor(protected readonly fields: NodeFields & { lifecycle: L }) {}
 
   static get type(): string {
     throw new Error('Node type not implemented')
@@ -40,34 +63,60 @@ abstract class EditorNode<
     return Object.getPrototypeOf(this).constructor.type
   }
 
-  get entry(): Entry<this> {
-    return this.state.get(this.key)
+  get parentKey(): Description['parentKey'] {
+    invariant(isStored(this), 'Node is not attached to state')
+    return this.getParentKey()
   }
 
-  get parentKey(): Description['parentKey'] {
-    return this.entry.parentKey
+  get lifecycle() {
+    return this.fields.lifecycle
   }
 
   get value(): Description['value'] {
-    return this.entry.value
+    invariant(isStored(this), 'Node is not attached to state')
+    return this.getEntry().value
+  }
+
+  getEntry(
+    this: EditorNode<'readonly' | 'writable', Description>,
+  ): Entry<this> {
+    return this.fields.state.get(this.fields.key)
+  }
+
+  getParentKey(
+    this: EditorNode<'readonly' | 'writable', Description>,
+  ): ParentKey<this> {
+    return this.getEntry().parentKey
+  }
+
+  getValue(
+    this: EditorNode<'readonly' | 'writable', Description>,
+  ): EntryValue<this> {
+    return this.getEntry().value
   }
 }
 
-class TextNode extends EditorNode<{
-  type: 'text'
-  value: Y.Text
-  parentKey: Key
-}> {
+class TextNode<L extends NodeLifecycle> extends EditorNode<
+  L,
+  {
+    type: 'text'
+    value: Y.Text
+    parentKey: Key
+  }
+> {
   static get type() {
     return 'text' as const
   }
 }
 
-class RootNode extends EditorNode<{
-  type: 'root'
-  value: Key<TextNode>
-  parentKey: null
-}> {
+class RootNode<L extends NodeLifecycle> extends EditorNode<
+  L,
+  {
+    type: 'root'
+    value: Key<TextNode<'readonly' | 'writable'>>
+    parentKey: null
+  }
+> {
   static get type() {
     return 'root' as const
   }
