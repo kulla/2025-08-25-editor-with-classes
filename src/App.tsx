@@ -130,6 +130,21 @@ class Transaction {
 
     this.set(key, { type, key, parentKey, value: newValue })
   }
+
+  insert<N extends EditorNode>({
+    type,
+    parentKey,
+    createValue,
+  }: {
+    type: Type<N>
+    parentKey: ParentKey<N>
+    createValue: (key: Key<N>) => EntryValue<N>
+  }) {
+    const key = this.generateKey(type)
+    const value = createValue(key)
+
+    this.set(key, { type, key, parentKey, value })
+  }
 }
 
 type Entry<N extends EditorNode = EditorNode> = {
