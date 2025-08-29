@@ -2,6 +2,7 @@ import * as Y from 'yjs'
 
 import './App.css'
 import { invariant } from 'es-toolkit'
+import { useRef, useSyncExternalStore } from 'react'
 
 export default function App() {
   return (
@@ -172,6 +173,28 @@ function getSingletonYDoc() {
   return ydoc
 }
 
+function useEditorState() {
+  const state = useRef(new EditorState()).current
+  const lastReturn = useRef({ state, updateCount: state.updateCount })
+
+  return useSyncExternalStore(
+    (listener) => {
+      state.addUpdateListener(listener)
+
+      return () => state.removeUpdateListener(listener)
+    },
+    () => {
+      if (lastReturn.current.updateCount === state.updateCount) {
+        return lastReturn.current
+      }
+
+      lastReturn.current = { state, updateCount: state.updateCount }
+
+      return lastReturn.current
+    },
+  )
+}
+
 class EditorState implements ReadonlyState {
   private ydoc = getSingletonYDoc()
   private state = this.ydoc.getMap('state')
@@ -186,6 +209,14 @@ class EditorState implements ReadonlyState {
     return entry
   }
 
+  addUpdateListener(listener: () => void) {
+    this.ydoc.on('update', listener)
+  }
+
+  removeUpdateListener(listener: () => void) {
+    this.ydoc.off('update', listener)
+  }
+
   update(updateFn: (t: Transaction) => void) {
     this.ydoc.transact(() => {
       updateFn(
@@ -195,23 +226,20 @@ class EditorState implements ReadonlyState {
           (type) => this.generateKey(type),
         ),
       )
-      this.incrementUpdateCounter()
+      this.incrementUpdateCount()
     })
   }
 
-  get updateCounter(): number {
-    const updateCounter = this.state.get('updateCounter') ?? 0
+  get updateCount(): number {
+    const updateCount = this.state.get('updateCount') ?? 0
 
-    invariant(
-      typeof updateCounter === 'number',
-      'updateCounter must be a number',
-    )
+    invariant(typeof updateCount === 'number', 'updateCounter must be a number')
 
-    return updateCounter
+    return updateCount
   }
 
-  private incrementUpdateCounter() {
-    this.state.set('updateCounter', this.updateCounter + 1)
+  private incrementUpdateCount() {
+    this.state.set('updateCount', this.updateCount + 1)
   }
 
   private set<N extends EditorNode>(key: Key<N>, entry: Entry<N>) {
