@@ -47,10 +47,12 @@ abstract class EditorNode<
     readonly type: string
     readonly value: object | string | number | boolean
     readonly parentKey: string | null
+    readonly jsonValue: unknown
   } = {
     type: string
     value: object | string | number | boolean
     parentKey: string | null
+    jsonValue: unknown
   },
 > {
   constructor(protected readonly fields: NodeFields & { lifecycle: L }) {}
@@ -94,6 +96,12 @@ abstract class EditorNode<
   ): EntryValue<this> {
     return this.getEntry().value
   }
+
+  abstract create(
+    this: EditorNode<'detached', Description>,
+    jsonValue: Description['jsonValue'],
+    parentKey: ParentKey<this>,
+  ): Key<this>
 }
 
 class TextNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
@@ -102,10 +110,26 @@ class TextNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
     type: 'text'
     value: Y.Text
     parentKey: Key
+    jsonValue: string
   }
 > {
   static get type() {
     return 'text' as const
+  }
+
+  create(
+    this: TextNode<'detached'>,
+    jsonValue: string,
+    parentKey: Key,
+  ): Key<TextNode> {
+    const value = new Y.Text()
+    value.insert(0, jsonValue)
+
+    return this.fields.state.insert<TextNode>({
+      type: TextNode.type,
+      parentKey,
+      createValue: () => value,
+    })
   }
 }
 
@@ -115,10 +139,25 @@ class RootNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
     type: 'root'
     value: Key<TextNode<'readonly' | 'writable'>>
     parentKey: null
+    jsonValue: { type: 'root'; text: string }
   }
 > {
+  static rootKey: Key<RootNode> = 'root:0'
+
   static get type() {
     return 'root' as const
+  }
+
+  create(
+    this: RootNode<'detached'>,
+    jsonValue: { type: 'root'; text: string },
+  ) {
+    const value = new TextNode({
+      lifecycle: 'detached',
+      state: this.fields.state,
+    }).create(jsonValue.text, RootNode.rootKey)
+
+    return this.fields.state.insertRoot({ key: RootNode.rootKey, value })
   }
 }
 
@@ -214,8 +253,9 @@ class Transaction implements WriteableState {
   }: {
     key: Key<RootNode>
     value: EntryValue<RootNode>
-  }) {
+  }): Key<RootNode> {
     this.set(key, { type: RootNode.type, key, parentKey: null, value })
+    return key
   }
 
   insert<N extends EditorNode>({
@@ -226,11 +266,13 @@ class Transaction implements WriteableState {
     type: Type<N>
     parentKey: ParentKey<N>
     createValue: (key: Key<N>) => EntryValue<N>
-  }) {
+  }): Key<N> {
     const key = this.generateKey(type)
     const value = createValue(key)
 
     this.set(key, { type, key, parentKey, value })
+
+    return key
   }
 }
 
@@ -243,12 +285,15 @@ interface WriteableState extends ReadonlyState {
     key: Key<N>,
     updateFn: EntryValue<N> | ((v: EntryValue<N>) => EntryValue<N>),
   ): void
-  insertRoot(params: { key: Key<RootNode>; value: EntryValue<RootNode> }): void
+  insertRoot(params: {
+    key: Key<RootNode>
+    value: EntryValue<RootNode>
+  }): Key<RootNode>
   insert<N extends EditorNode>(params: {
     type: Type<N>
     parentKey: ParentKey<N>
     createValue: (key: Key<N>) => EntryValue<N>
-  }): void
+  }): Key<N>
 }
 
 type Entry<N extends EditorNode = EditorNode> = {
@@ -261,10 +306,3 @@ type EntryValue<N extends EditorNode> = N['value']
 type ParentKey<N extends EditorNode> = N['parentKey']
 type Key<N extends EditorNode = EditorNode> = `${Type<N>}:${number}`
 type Type<N extends EditorNode> = N['type']
-
-function isKeyType<N extends EditorNode>(
-  type: Type<N>,
-  key: Key,
-): key is Key<N> {
-  return key.startsWith(`${type}:`)
-}
