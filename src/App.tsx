@@ -87,15 +87,35 @@ class EditorState {
     return entry
   }
 
+  update(updateFn: (t: Transaction) => void) {
+    this.ydoc.transact(() => {
+      updateFn(
+        new Transaction(
+          (key) => this.get(key),
+          (key, entry) => this.set(key, entry),
+          (type) => this.generateKey(type),
+        ),
+      )
+    })
+  }
+
   private set<N extends EditorNode>(key: Key<N>, entry: Entry<N>) {
     this.entries.set(key, entry)
   }
 
-  private generateKey<N extends EditorNode>(type: Type<N>) {
+  private generateKey<N extends EditorNode>(type: Type<N>): Key<N> {
     this.lastKey += 1
 
     return `${type}:${this.lastKey}`
   }
+}
+
+class Transaction {
+  constructor(
+    private get: <N extends EditorNode>(key: Key<N>) => Entry<N>,
+    private set: <N extends EditorNode>(key: Key<N>, entry: Entry<N>) => void,
+    private generateKey: <N extends EditorNode>(type: Type<N>) => Key<N>,
+  ) {}
 }
 
 type Entry<N extends EditorNode = EditorNode> = {
