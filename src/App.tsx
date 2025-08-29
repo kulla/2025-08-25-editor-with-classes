@@ -80,6 +80,7 @@ function getSingletonYDoc() {
 
 class EditorState {
   private ydoc = getSingletonYDoc()
+  private state = this.ydoc.getMap('state')
   private entries: Y.Map<Entry> = this.ydoc.getMap('entries')
   private lastKey = -1
 
@@ -100,7 +101,23 @@ class EditorState {
           (type) => this.generateKey(type),
         ),
       )
+      this.incrementUpdateCounter()
     })
+  }
+
+  get updateCounter(): number {
+    const updateCounter = this.state.get('updateCounter') ?? 0
+
+    invariant(
+      typeof updateCounter === 'number',
+      'updateCounter must be a number',
+    )
+
+    return updateCounter
+  }
+
+  private incrementUpdateCounter() {
+    this.state.set('updateCounter', this.updateCounter + 1)
   }
 
   private set<N extends EditorNode>(key: Key<N>, entry: Entry<N>) {
