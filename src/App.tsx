@@ -131,7 +131,7 @@ class EditorState implements ReadonlyState {
   }
 }
 
-class Transaction implements MutableState {
+class Transaction implements WriteableState {
   constructor(
     public readonly get: <N extends EditorNode>(key: Key<N>) => Entry<N>,
     private readonly set: <N extends EditorNode>(
@@ -183,7 +183,7 @@ interface ReadonlyState {
   get<N extends EditorNode>(key: Key<N>): Entry<N>
 }
 
-interface MutableState extends ReadonlyState {
+interface WriteableState extends ReadonlyState {
   update<N extends EditorNode>(
     key: Key<N>,
     updateFn: EntryValue<N> | ((v: EntryValue<N>) => EntryValue<N>),
