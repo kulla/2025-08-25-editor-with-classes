@@ -17,22 +17,22 @@ abstract class EditorNode<
   V = unknown,
   P extends string | null = string | null,
 > {
+  protected readonly key: Key<this>
+
   constructor(
     protected state: EditorState,
-    protected _key: Key,
+    key: Key,
   ) {
     invariant(
-      isKeyType(this.type, _key),
-      `Key ${_key} is not of type ${this.type}`,
+      isKeyType(this.type as Type<this>, key),
+      `Key ${key} is not of type ${this.type}`,
     )
+
+    this.key = key
   }
 
   static get type(): string {
     throw new Error('Node type not implemented')
-  }
-
-  get key(): Key<this> {
-    return this._key as Key<this>
   }
 
   get type(): T {
