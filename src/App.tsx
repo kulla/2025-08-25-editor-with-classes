@@ -19,17 +19,20 @@ abstract class EditorNode<
 > {
   constructor(
     protected _state: EditorState,
-    protected _id: NodeId,
+    protected _key: Key,
   ) {
-    invariant(isIdType(this.type, _id), `Id ${_id} is not of type ${this.type}`)
+    invariant(
+      isKeyType(this.type, _key),
+      `Key ${_key} is not of type ${this.type}`,
+    )
   }
 
   static get type(): string {
     throw new Error('Node type not implemented')
   }
 
-  get id(): NodeId<this> {
-    return this._id as NodeId<this>
+  get key(): Key<this> {
+    return this._key as Key<this>
   }
 
   get type(): T {
@@ -37,10 +40,10 @@ abstract class EditorNode<
   }
 
   get entry(): Entry<this> {
-    return this._state.get(this.id)
+    return this._state.get(this.key)
   }
 
-  get parentId(): P {
+  get parentKey(): P {
     return this.entry.parentId
   }
 
@@ -49,13 +52,13 @@ abstract class EditorNode<
   }
 }
 
-class TextNode extends EditorNode<'text', Y.Text, NodeId> {
+class TextNode extends EditorNode<'text', Y.Text, Key> {
   static get type() {
     return 'text' as const
   }
 }
 
-class RootNode extends EditorNode<'root', NodeId<TextNode>, null> {
+class RootNode extends EditorNode<'root', Key<TextNode>, null> {
   static get type() {
     return 'root' as const
   }
@@ -76,28 +79,28 @@ class EditorState {
   private ydoc = getSingletonYDoc()
   private entries: Y.Map<Entry> = this.ydoc.getMap('entries')
 
-  get<N extends EditorNode>(id: NodeId<N>): Entry<N> {
-    const entry = this.entries.get(id)
+  get<N extends EditorNode>(key: Key<N>): Entry<N> {
+    const entry = this.entries.get(key)
 
-    invariant(entry != null, `Node with id ${id} does not exist`)
+    invariant(entry != null, `Node with key ${key} does not exist`)
 
     return entry
   }
 }
 
 type Entry<N extends EditorNode = EditorNode> = {
-  id: NodeId<N>
-  parentId: ParentId<N>
+  id: Key<N>
+  parentId: ParentKey<N>
   value: EntryValue<N>
 }
 type EntryValue<N extends EditorNode> = N['value']
-type ParentId<N extends EditorNode> = N['parentId']
-type NodeId<N extends EditorNode = EditorNode> = `${Type<N>}:${number}`
+type ParentKey<N extends EditorNode> = N['parentKey']
+type Key<N extends EditorNode = EditorNode> = `${Type<N>}:${number}`
 type Type<N extends EditorNode> = N['type']
 
-function isIdType<N extends EditorNode>(
+function isKeyType<N extends EditorNode>(
   type: Type<N>,
-  id: NodeId,
-): id is NodeId<N> {
-  return id.startsWith(`${type}:`)
+  key: Key,
+): key is Key<N> {
+  return key.startsWith(`${type}:`)
 }
