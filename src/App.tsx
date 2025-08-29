@@ -13,13 +13,11 @@ export default function App() {
 }
 
 abstract class EditorNode<
-  T extends string = string,
-  V extends object | string | number | boolean =
-    | object
-    | string
-    | number
-    | boolean,
-  P extends string | null = string | null,
+  Description extends {
+    readonly type: string
+    readonly value: object | string | number | boolean
+    readonly parentKey: string | null
+  },
 > {
   protected readonly state: EditorState
   protected readonly key: Key<this>
@@ -38,7 +36,7 @@ abstract class EditorNode<
     throw new Error('Node type not implemented')
   }
 
-  get type(): T {
+  get type(): Description['type'] {
     return Object.getPrototypeOf(this).constructor.type
   }
 
@@ -46,22 +44,30 @@ abstract class EditorNode<
     return this.state.get(this.key)
   }
 
-  get parentKey(): P {
+  get parentKey(): Description['parentKey'] {
     return this.entry.parentKey
   }
 
-  get value(): V {
+  get value(): Description['value'] {
     return this.entry.value
   }
 }
 
-class TextNode extends EditorNode<'text', Y.Text, Key> {
+class TextNode extends EditorNode<{
+  type: 'text'
+  value: Y.Text
+  parentKey: Key
+}> {
   static get type() {
     return 'text' as const
   }
 }
 
-class RootNode extends EditorNode<'root', Key<TextNode>, null> {
+class RootNode extends EditorNode<{
+  type: 'root'
+  value: Key<TextNode>
+  parentKey: null
+}> {
   static get type() {
     return 'root' as const
   }
