@@ -77,6 +77,7 @@ function getSingletonYDoc() {
 class EditorState {
   private ydoc = getSingletonYDoc()
   private entries: Y.Map<Entry> = this.ydoc.getMap('entries')
+  private lastKey = -1
 
   get<N extends EditorNode>(key: Key<N>): Entry<N> {
     const entry = this.entries.get(key)
@@ -88,6 +89,12 @@ class EditorState {
 
   private set<N extends EditorNode>(key: Key<N>, entry: Entry<N>) {
     this.entries.set(key, entry)
+  }
+
+  private generateKey<N extends EditorNode>(type: Type<N>) {
+    this.lastKey += 1
+
+    return `${type}:${this.lastKey}`
   }
 }
 
