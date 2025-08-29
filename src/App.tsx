@@ -78,7 +78,7 @@ function getSingletonYDoc() {
   return ydoc
 }
 
-class EditorState {
+class EditorState implements ReadonlyState {
   private ydoc = getSingletonYDoc()
   private state = this.ydoc.getMap('state')
   private entries: Y.Map<Entry> = this.ydoc.getMap('entries')
@@ -131,9 +131,9 @@ class EditorState {
   }
 }
 
-class Transaction {
+class Transaction implements MutableState {
   constructor(
-    private readonly get: <N extends EditorNode>(key: Key<N>) => Entry<N>,
+    public readonly get: <N extends EditorNode>(key: Key<N>) => Entry<N>,
     private readonly set: <N extends EditorNode>(
       key: Key<N>,
       entry: Entry<N>,
@@ -177,6 +177,23 @@ class Transaction {
 
     this.set(key, { type, key, parentKey, value })
   }
+}
+
+interface ReadonlyState {
+  get<N extends EditorNode>(key: Key<N>): Entry<N>
+}
+
+interface MutableState extends ReadonlyState {
+  update<N extends EditorNode>(
+    key: Key<N>,
+    updateFn: EntryValue<N> | ((v: EntryValue<N>) => EntryValue<N>),
+  ): void
+  insertRoot(params: { key: Key<RootNode>; value: EntryValue<RootNode> }): void
+  insert<N extends EditorNode>(params: {
+    type: Type<N>
+    parentKey: ParentKey<N>
+    createValue: (key: Key<N>) => EntryValue<N>
+  }): void
 }
 
 type Entry<N extends EditorNode = EditorNode> = {
