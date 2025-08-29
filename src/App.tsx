@@ -85,6 +85,10 @@ class EditorState {
 
     return entry
   }
+
+  private set<N extends EditorNode>(key: Key<N>, entry: Entry<N>) {
+    this.entries.set(key, entry)
+  }
 }
 
 type Entry<N extends EditorNode = EditorNode> = {
