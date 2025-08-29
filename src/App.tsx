@@ -17,17 +17,16 @@ abstract class EditorNode<
   V = unknown,
   P extends string | null = string | null,
 > {
+  protected readonly state: EditorState
   protected readonly key: Key<this>
 
-  constructor(
-    protected state: EditorState,
-    key: Key,
-  ) {
+  constructor(state: EditorState, key: Key) {
     invariant(
       isKeyType(this.type as Type<this>, key),
       `Key ${key} is not of type ${this.type}`,
     )
 
+    this.state = state
     this.key = key
   }
 
