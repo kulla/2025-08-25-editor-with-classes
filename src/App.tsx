@@ -14,7 +14,11 @@ export default function App() {
 
 abstract class EditorNode<
   T extends string = string,
-  V = unknown,
+  V extends object | string | number | boolean =
+    | object
+    | string
+    | number
+    | boolean,
   P extends string | null = string | null,
 > {
   protected readonly state: EditorState
@@ -43,7 +47,7 @@ abstract class EditorNode<
   }
 
   get parentKey(): P {
-    return this.entry.parentId
+    return this.entry.parentKey
   }
 
   get value(): V {
@@ -116,11 +120,22 @@ class Transaction {
     private set: <N extends EditorNode>(key: Key<N>, entry: Entry<N>) => void,
     private generateKey: <N extends EditorNode>(type: Type<N>) => Key<N>,
   ) {}
+
+  update<N extends EditorNode>(
+    key: Key<N>,
+    updateFn: EntryValue<N> | ((v: EntryValue<N>) => EntryValue<N>),
+  ) {
+    const { type, parentKey, value } = this.get(key)
+    const newValue = typeof updateFn === 'function' ? updateFn(value) : updateFn
+
+    this.set(key, { type, key, parentKey, value: newValue })
+  }
 }
 
 type Entry<N extends EditorNode = EditorNode> = {
-  id: Key<N>
-  parentId: ParentKey<N>
+  type: Type<N>
+  key: Key<N>
+  parentKey: ParentKey<N>
   value: EntryValue<N>
 }
 type EntryValue<N extends EditorNode> = N['value']
