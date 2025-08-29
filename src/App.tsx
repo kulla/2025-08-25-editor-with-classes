@@ -133,9 +133,14 @@ class EditorState {
 
 class Transaction {
   constructor(
-    private get: <N extends EditorNode>(key: Key<N>) => Entry<N>,
-    private set: <N extends EditorNode>(key: Key<N>, entry: Entry<N>) => void,
-    private generateKey: <N extends EditorNode>(type: Type<N>) => Key<N>,
+    private readonly get: <N extends EditorNode>(key: Key<N>) => Entry<N>,
+    private readonly set: <N extends EditorNode>(
+      key: Key<N>,
+      entry: Entry<N>,
+    ) => void,
+    private readonly generateKey: <N extends EditorNode>(
+      type: Type<N>,
+    ) => Key<N>,
   ) {}
 
   update<N extends EditorNode>(
