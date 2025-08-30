@@ -190,8 +190,6 @@ class RootNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
   }
 }
 
-const nodes = [RootNode, TextNode] as const
-
 let ydoc: Y.Doc | null = null
 
 function getSingletonYDoc() {
