@@ -2,13 +2,41 @@ import * as Y from 'yjs'
 
 import './App.css'
 import { invariant } from 'es-toolkit'
-import { useRef, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { DebugPanel } from './components/debug-panel'
 
 export default function App() {
+  const { state } = useEditorState()
+
+  useEffect(() => {
+    setTimeout(() => {
+      if (state.has(RootNode.rootKey)) return
+
+      state.update((t) => {
+        new RootNode({ lifecycle: 'detached', state: t }).create({
+          type: 'root',
+          text: 'Hello, Rsbuild!',
+        })
+      })
+    }, 1000)
+  })
+
   return (
     <main className="prose p-10">
       <h1>Rsbuild with React</h1>
       <p>Start building amazing things with Rsbuild.</p>
+      <h1>Debug Panel</h1>
+      <DebugPanel
+        labels={{ entries: 'Internal State' } as const}
+        showOnStartup={{ entries: true }}
+        getCurrentValue={{
+          entries: () =>
+            state
+              .getEntries()
+              .map(([key, entry]) => `${key}: ${JSON.stringify(entry)}`)
+              .join('\n'),
+        }}
+      />
     </main>
   )
 }
@@ -207,6 +235,14 @@ class EditorState implements ReadonlyState {
     invariant(entry != null, `Node with key ${key} does not exist`)
 
     return entry
+  }
+
+  getEntries(): [string, Entry][] {
+    return Array.from(this.entries.entries())
+  }
+
+  has<N extends EditorNode>(key: Key<N>): boolean {
+    return this.entries.has(key)
   }
 
   addUpdateListener(listener: () => void) {
