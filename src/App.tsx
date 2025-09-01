@@ -98,7 +98,7 @@ abstract class AbstractEditorNode<
     return this.fields.lifecycle
   }
 
-  get value(): Description['value'] {
+  get entryValue(): Description['entryValue'] {
     invariant(isStored(this), 'Node is not attached to state')
     return this.getEntry().value
   }
@@ -115,7 +115,7 @@ abstract class AbstractEditorNode<
     return this.getEntry().parentKey
   }
 
-  getValue(
+  getEntryValue(
     this: AbstractEditorNode<'readonly' | 'writable', Description>,
   ): EntryValue<this> {
     return this.getEntry().value
@@ -134,7 +134,7 @@ class TextNode<
   L,
   {
     type: 'text'
-    value: Y.Text
+    entryValue: Y.Text
     parentKey: Key
     jsonValue: string
   }
@@ -165,7 +165,7 @@ class RootNode<
   L,
   {
     type: 'root'
-    value: Key<TextNode<'readonly' | 'writable'>>
+    entryValue: Key<TextNode<'readonly' | 'writable'>>
     parentKey: null
     jsonValue: { type: 'root'; text: string }
   }
@@ -363,7 +363,7 @@ type Entry<N extends EditorNode = EditorNode> = {
   parentKey: ParentKey<N>
   value: EntryValue<N>
 }
-type EntryValue<N extends EditorNode> = N['value']
+type EntryValue<N extends EditorNode> = N['entryValue']
 type ParentKey<N extends EditorNode> = N['parentKey']
 type Key<N extends EditorNode = EditorNode> = `${Type<N>}:${number}`
 type Type<N extends EditorNode> = N['type']
@@ -371,6 +371,6 @@ type Type<N extends EditorNode> = N['type']
 interface EditorNode {
   type: string
   parentKey: string | null
-  value: object | number | boolean | string
+  entryValue: object | number | boolean | string
   jsonValue: unknown
 }
