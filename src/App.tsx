@@ -64,30 +64,25 @@ interface WritableFields<N extends EditorNode> {
   readonly state: WriteableState
 }
 
-function isStored<N extends EditorNode>(
+function isStored<N extends AbstractEditorNode>(
   node: N,
-): node is N & EditorNode<'readonly' | 'writable'> {
+): node is N & AbstractEditorNode<'readonly' | 'writable'> {
   return node.lifecycle !== 'detached'
 }
 
-abstract class EditorNode<
+abstract class AbstractEditorNode<
   L extends NodeLifecycle = NodeLifecycle,
-  Description extends {
-    readonly type: string
-    readonly value: object | string | number | boolean
-    readonly parentKey: string | null
-    readonly jsonValue: unknown
-  } = {
-    type: string
-    value: object | string | number | boolean
-    parentKey: string | null
-    jsonValue: unknown
-  },
-> {
+  Description extends EditorNode = EditorNode,
+> implements EditorNode
+{
   constructor(protected readonly fields: NodeFields & { lifecycle: L }) {}
 
   static get type(): string {
     throw new Error('Node type not implemented')
+  }
+
+  get jsonValue(): Description['jsonValue'] {
+    throw new Error('not implemented yet')
   }
 
   get type(): Description['type'] {
@@ -109,31 +104,33 @@ abstract class EditorNode<
   }
 
   getEntry(
-    this: EditorNode<'readonly' | 'writable', Description>,
+    this: AbstractEditorNode<'readonly' | 'writable', Description>,
   ): Entry<this> {
     return this.fields.state.get(this.fields.key)
   }
 
   getParentKey(
-    this: EditorNode<'readonly' | 'writable', Description>,
+    this: AbstractEditorNode<'readonly' | 'writable', Description>,
   ): ParentKey<this> {
     return this.getEntry().parentKey
   }
 
   getValue(
-    this: EditorNode<'readonly' | 'writable', Description>,
+    this: AbstractEditorNode<'readonly' | 'writable', Description>,
   ): EntryValue<this> {
     return this.getEntry().value
   }
 
   abstract create(
-    this: EditorNode<'detached', Description>,
+    this: AbstractEditorNode<'detached', Description>,
     jsonValue: Description['jsonValue'],
     parentKey: ParentKey<this>,
   ): Key<this>
 }
 
-class TextNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
+class TextNode<
+  L extends NodeLifecycle = NodeLifecycle,
+> extends AbstractEditorNode<
   L,
   {
     type: 'text'
@@ -162,7 +159,9 @@ class TextNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
   }
 }
 
-class RootNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
+class RootNode<
+  L extends NodeLifecycle = NodeLifecycle,
+> extends AbstractEditorNode<
   L,
   {
     type: 'root'
@@ -368,3 +367,10 @@ type EntryValue<N extends EditorNode> = N['value']
 type ParentKey<N extends EditorNode> = N['parentKey']
 type Key<N extends EditorNode = EditorNode> = `${Type<N>}:${number}`
 type Type<N extends EditorNode> = N['type']
+
+interface EditorNode {
+  type: string
+  parentKey: string | null
+  value: object | number | boolean | string
+  jsonValue: unknown
+}
