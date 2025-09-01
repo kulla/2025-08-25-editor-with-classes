@@ -64,12 +64,6 @@ interface WritableFields<N extends EditorNode> {
   readonly state: WriteableState
 }
 
-function isStored<N extends AbstractEditorNode>(
-  node: N,
-): node is N & AbstractEditorNode<'readonly' | 'writable'> {
-  return node.lifecycle !== 'detached'
-}
-
 abstract class AbstractEditorNode<
   L extends NodeLifecycle = NodeLifecycle,
   Description extends EditorNode = EditorNode,
@@ -90,7 +84,7 @@ abstract class AbstractEditorNode<
   }
 
   get parentKey(): Description['parentKey'] {
-    invariant(isStored(this), 'Node is not attached to state')
+    invariant(this.isStored(), 'Node is not attached to state')
     return this.getParentKey()
   }
 
@@ -99,7 +93,7 @@ abstract class AbstractEditorNode<
   }
 
   get entryValue(): Description['entryValue'] {
-    invariant(isStored(this), 'Node is not attached to state')
+    invariant(this.isStored(), 'Node is not attached to state')
     return this.getEntry().value
   }
 
@@ -126,6 +120,10 @@ abstract class AbstractEditorNode<
     jsonValue: Description['jsonValue'],
     parentKey: ParentKey<this>,
   ): Key<this>
+
+  isStored(): this is AbstractEditorNode<'readonly' | 'writable'> {
+    return this.lifecycle !== 'detached'
+  }
 }
 
 class TextNode<
