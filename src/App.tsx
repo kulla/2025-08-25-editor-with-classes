@@ -4,6 +4,7 @@ import './App.css'
 import { invariant } from 'es-toolkit'
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { DebugPanel } from './components/debug-panel'
+import type { NodeMap, NodeType } from './nodes/types'
 
 export default function App() {
   const { state } = useEditorState()
@@ -42,48 +43,47 @@ export default function App() {
 }
 
 type NodeLifecycle = NodeFields['lifecycle']
-type NodeFields =
+type NodeFields<T extends NodeType = NodeType> =
   | DetachedFields
-  | ReadonlyFields<EditorNode>
-  | WritableFields<EditorNode>
+  | { [S in T]: ReadonlyFields<S> }[T]
+  | { [S in T]: WritableFields<S> }[T]
 
 interface DetachedFields {
   readonly lifecycle: 'detached'
   readonly state: WriteableState
 }
 
-interface ReadonlyFields<N extends EditorNode> {
+interface ReadonlyFields<T extends NodeType> {
   readonly lifecycle: 'readonly'
-  readonly key: Key<N>
+  readonly key: Key<T>
   readonly state: ReadonlyState
 }
 
-interface WritableFields<N extends EditorNode> {
+interface WritableFields<T extends NodeType> {
   readonly lifecycle: 'writable'
-  readonly key: Key<N>
+  readonly key: Key<T>
   readonly state: WriteableState
 }
 
 abstract class AbstractEditorNode<
   L extends NodeLifecycle = NodeLifecycle,
-  Description extends EditorNode = EditorNode,
-> implements EditorNode
-{
-  constructor(protected readonly fields: NodeFields & { lifecycle: L }) {}
+  T extends NodeType = NodeType,
+> {
+  constructor(protected readonly fields: NodeFields<T> & { lifecycle: L }) {}
 
   static get type(): string {
     throw new Error('Node type not implemented')
   }
 
-  get jsonValue(): Description['jsonValue'] {
+  get jsonValue(): JSONValue<T> {
     throw new Error('not implemented yet')
   }
 
-  get type(): Description['type'] {
+  get type(): T {
     return Object.getPrototypeOf(this).constructor.type
   }
 
-  get parentKey(): Description['parentKey'] {
+  get parentKey(): ParentKey<T> {
     invariant(this.isStored(), 'Node is not attached to state')
     return this.getParentKey()
   }
@@ -92,51 +92,51 @@ abstract class AbstractEditorNode<
     return this.fields.lifecycle
   }
 
-  get entryValue(): Description['entryValue'] {
+  get entryValue(): EntryValue<T> {
     invariant(this.isStored(), 'Node is not attached to state')
     return this.getEntry().value
   }
 
-  getEntry(
-    this: AbstractEditorNode<'readonly' | 'writable', Description>,
-  ): Entry<this> {
+  getEntry(this: AbstractEditorNode<'readonly' | 'writable', T>): Entry<T> {
     return this.fields.state.get(this.fields.key)
   }
 
   getParentKey(
-    this: AbstractEditorNode<'readonly' | 'writable', Description>,
-  ): ParentKey<this> {
+    this: AbstractEditorNode<'readonly' | 'writable', T>,
+  ): ParentKey<T> {
     return this.getEntry().parentKey
   }
 
   getEntryValue(
-    this: AbstractEditorNode<'readonly' | 'writable', Description>,
-  ): EntryValue<this> {
+    this: AbstractEditorNode<'readonly' | 'writable', T>,
+  ): EntryValue<T> {
     return this.getEntry().value
   }
 
   abstract create(
-    this: AbstractEditorNode<'detached', Description>,
-    jsonValue: Description['jsonValue'],
-    parentKey: ParentKey<this>,
-  ): Key<this>
+    this: AbstractEditorNode<'detached', T>,
+    jsonValue: JSONValue<T>,
+    parentKey: ParentKey<T>,
+  ): Key<T>
 
-  isStored(): this is AbstractEditorNode<'readonly' | 'writable'> {
+  isStored(): this is AbstractEditorNode<'readonly' | 'writable', T> {
     return this.lifecycle !== 'detached'
+  }
+}
+
+declare module './nodes/types' {
+  interface NodeMap {
+    text: {
+      entryValue: Y.Text
+      parentKey: Key
+      jsonValue: string
+    }
   }
 }
 
 class TextNode<
   L extends NodeLifecycle = NodeLifecycle,
-> extends AbstractEditorNode<
-  L,
-  {
-    type: 'text'
-    entryValue: Y.Text
-    parentKey: Key
-    jsonValue: string
-  }
-> {
+> extends AbstractEditorNode<L, 'text'> {
   static get type() {
     return 'text' as const
   }
@@ -145,11 +145,11 @@ class TextNode<
     this: TextNode<'detached'>,
     jsonValue: string,
     parentKey: Key,
-  ): Key<TextNode> {
+  ): Key<'text'> {
     const value = new Y.Text()
     value.insert(0, jsonValue)
 
-    return this.fields.state.insert<TextNode>({
+    return this.fields.state.insert({
       type: TextNode.type,
       parentKey,
       createValue: () => value,
@@ -157,18 +157,20 @@ class TextNode<
   }
 }
 
+declare module './nodes/types' {
+  interface NodeMap {
+    root: {
+      entryValue: Key<'text'>
+      parentKey: null
+      jsonValue: { type: 'root'; text: string }
+    }
+  }
+}
+
 class RootNode<
   L extends NodeLifecycle = NodeLifecycle,
-> extends AbstractEditorNode<
-  L,
-  {
-    type: 'root'
-    entryValue: Key<TextNode<'readonly' | 'writable'>>
-    parentKey: null
-    jsonValue: { type: 'root'; text: string }
-  }
-> {
-  static rootKey: Key<RootNode> = 'root:0'
+> extends AbstractEditorNode<L, 'root'> {
+  static rootKey: Key<'root'> = 'root:0'
 
   static get type() {
     return 'root' as const
@@ -224,8 +226,8 @@ class EditorState implements ReadonlyState {
   private entries: Y.Map<Entry> = this.ydoc.getMap('entries')
   private lastKey = -1
 
-  get<N extends EditorNode>(key: Key<N>): Entry<N> {
-    const entry = this.entries.get(key)
+  get<T extends NodeType>(key: Key<T>): Entry<T> {
+    const entry = this.entries.get(key) as Entry<T> | undefined
 
     invariant(entry != null, `Node with key ${key} does not exist`)
 
@@ -236,7 +238,7 @@ class EditorState implements ReadonlyState {
     return Array.from(this.entries.entries())
   }
 
-  has<N extends EditorNode>(key: Key<N>): boolean {
+  has(key: Key): boolean {
     return this.entries.has(key)
   }
 
@@ -273,11 +275,11 @@ class EditorState implements ReadonlyState {
     this.state.set('updateCount', this.updateCount + 1)
   }
 
-  private set<N extends EditorNode>(key: Key<N>, entry: Entry<N>) {
+  private set<T extends NodeType>(key: Key<T>, entry: Entry<T>) {
     this.entries.set(key, entry)
   }
 
-  private generateKey<N extends EditorNode>(type: Type<N>): Key<N> {
+  private generateKey<T extends NodeType>(type: T): Key<T> {
     this.lastKey += 1
 
     return `${type}:${this.lastKey}`
@@ -286,19 +288,17 @@ class EditorState implements ReadonlyState {
 
 class Transaction implements WriteableState {
   constructor(
-    public readonly get: <N extends EditorNode>(key: Key<N>) => Entry<N>,
-    private readonly set: <N extends EditorNode>(
-      key: Key<N>,
-      entry: Entry<N>,
+    public readonly get: <T extends NodeType>(key: Key<T>) => Entry<T>,
+    private readonly set: <T extends NodeType>(
+      key: Key<T>,
+      entry: Entry<T>,
     ) => void,
-    private readonly generateKey: <N extends EditorNode>(
-      type: Type<N>,
-    ) => Key<N>,
+    private readonly generateKey: <T extends NodeType>(type: T) => Key<T>,
   ) {}
 
-  update<N extends EditorNode>(
-    key: Key<N>,
-    updateFn: EntryValue<N> | ((v: EntryValue<N>) => EntryValue<N>),
+  update<T extends NodeType>(
+    key: Key<T>,
+    updateFn: EntryValue<T> | ((v: EntryValue<T>) => EntryValue<T>),
   ) {
     const { type, parentKey, value } = this.get(key)
     const newValue = typeof updateFn === 'function' ? updateFn(value) : updateFn
@@ -310,22 +310,22 @@ class Transaction implements WriteableState {
     key,
     value,
   }: {
-    key: Key<RootNode>
-    value: EntryValue<RootNode>
-  }): Key<RootNode> {
+    key: Key<'root'>
+    value: EntryValue<'root'>
+  }): Key<'root'> {
     this.set(key, { type: RootNode.type, key, parentKey: null, value })
     return key
   }
 
-  insert<N extends EditorNode>({
+  insert<T extends NodeType>({
     type,
     parentKey,
     createValue,
   }: {
-    type: Type<N>
-    parentKey: ParentKey<N>
-    createValue: (key: Key<N>) => EntryValue<N>
-  }): Key<N> {
+    type: T
+    parentKey: ParentKey<T>
+    createValue: (key: Key<T>) => EntryValue<T>
+  }): Key<T> {
     const key = this.generateKey(type)
     const value = createValue(key)
 
@@ -336,39 +336,32 @@ class Transaction implements WriteableState {
 }
 
 interface ReadonlyState {
-  get<N extends EditorNode>(key: Key<N>): Entry<N>
+  get<T extends NodeType>(key: Key<T>): Entry<T>
 }
 
 interface WriteableState extends ReadonlyState {
-  update<N extends EditorNode>(
-    key: Key<N>,
-    updateFn: EntryValue<N> | ((v: EntryValue<N>) => EntryValue<N>),
+  update<T extends NodeType>(
+    key: Key<T>,
+    updateFn: EntryValue<T> | ((v: EntryValue<T>) => EntryValue<T>),
   ): void
   insertRoot(params: {
-    key: Key<RootNode>
-    value: EntryValue<RootNode>
-  }): Key<RootNode>
-  insert<N extends EditorNode>(params: {
-    type: Type<N>
-    parentKey: ParentKey<N>
-    createValue: (key: Key<N>) => EntryValue<N>
-  }): Key<N>
+    key: Key<'root'>
+    value: EntryValue<'root'>
+  }): Key<'root'>
+  insert<T extends NodeType>(params: {
+    type: T
+    parentKey: ParentKey<T>
+    createValue: (key: Key<T>) => EntryValue<T>
+  }): Key<T>
 }
 
-type Entry<N extends EditorNode = EditorNode> = {
-  type: Type<N>
-  key: Key<N>
-  parentKey: ParentKey<N>
-  value: EntryValue<N>
+type Entry<T extends NodeType = NodeType> = {
+  type: T
+  key: Key<T>
+  parentKey: ParentKey<T>
+  value: EntryValue<T>
 }
-type EntryValue<N extends EditorNode> = N['entryValue']
-type ParentKey<N extends EditorNode> = N['parentKey']
-type Key<N extends EditorNode = EditorNode> = `${Type<N>}:${number}`
-type Type<N extends EditorNode> = N['type']
-
-interface EditorNode {
-  type: string
-  parentKey: string | null
-  entryValue: object | number | boolean | string
-  jsonValue: unknown
-}
+type JSONValue<T extends NodeType> = NodeMap[T]['jsonValue']
+type EntryValue<T extends NodeType> = NodeMap[T]['entryValue']
+type ParentKey<T extends NodeType> = NodeMap[T]['parentKey']
+type Key<T extends NodeType = NodeType> = `${T}:${number}`
