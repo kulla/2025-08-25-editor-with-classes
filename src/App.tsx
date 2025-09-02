@@ -2,10 +2,10 @@ import * as Y from 'yjs'
 
 import './App.css'
 import { invariant } from 'es-toolkit'
-import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { useEffect } from 'react'
 import { DebugPanel } from './components/debug-panel'
+import { useEditorState } from './hooks/use-editor-state'
 import type { EntryValue, JSONValue, NodeType } from './nodes/types'
-import { EditorState } from './state/editor-state'
 import type { Entry, Key, ReadonlyState, WriteableState } from './state/types'
 
 export default function App() {
@@ -165,26 +165,4 @@ export class RootNode<L extends Lifecycle = Lifecycle> extends EditorNode<
 
     return this.state.insertRoot({ key: RootNode.rootKey, value })
   }
-}
-
-function useEditorState() {
-  const state = useRef(new EditorState()).current
-  const lastReturn = useRef({ state, updateCount: state.updateCount })
-
-  return useSyncExternalStore(
-    (listener) => {
-      state.addUpdateListener(listener)
-
-      return () => state.removeUpdateListener(listener)
-    },
-    () => {
-      if (lastReturn.current.updateCount === state.updateCount) {
-        return lastReturn.current
-      }
-
-      lastReturn.current = { state, updateCount: state.updateCount }
-
-      return lastReturn.current
-    },
-  )
 }
