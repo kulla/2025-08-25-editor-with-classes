@@ -187,10 +187,16 @@ function useEditorState() {
 }
 
 class EditorState implements ReadonlyState {
-  private ydoc = getSingletonYDoc()
-  private state = this.ydoc.getMap('state')
-  private entries: Y.Map<Entry> = this.ydoc.getMap('entries')
   private lastKey = -1
+  private ydoc
+  private state
+  private entries
+
+  constructor(ydoc = getSingletonYDoc()) {
+    this.ydoc = ydoc
+    this.state = this.ydoc.getMap('state')
+    this.entries = this.ydoc.getMap<Entry>('entries')
+  }
 
   get<T extends NodeType>(key: Key<T>): Entry<T> {
     const entry = this.entries.get(key) as Entry<T> | undefined
