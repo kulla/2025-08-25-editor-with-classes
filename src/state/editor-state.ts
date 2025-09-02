@@ -1,6 +1,6 @@
 import { invariant } from 'es-toolkit'
-import { Transaction } from '../App'
 import type { NodeType } from '../nodes/types'
+import { Transaction } from './transaction'
 import type { Entry, Key, ReadonlyState } from './types'
 import { getSingletonYDoc } from './ydoc'
 
