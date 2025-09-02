@@ -42,10 +42,10 @@ export default function App() {
   )
 }
 
-type NodeLifecycle = 'detached' | 'readonly' | 'writable'
+type Lifecycle = 'detached' | 'readonly' | 'writable'
 
 abstract class EditorNode<
-  L extends NodeLifecycle = NodeLifecycle,
+  L extends Lifecycle = Lifecycle,
   T extends NodeType = NodeType,
 > {
   constructor(
@@ -112,10 +112,7 @@ declare module './nodes/types' {
   }
 }
 
-class TextNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
-  L,
-  'text'
-> {
+class TextNode<L extends Lifecycle = Lifecycle> extends EditorNode<L, 'text'> {
   static get type() {
     return 'text' as const
   }
@@ -145,10 +142,7 @@ declare module './nodes/types' {
   }
 }
 
-class RootNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
-  L,
-  'root'
-> {
+class RootNode<L extends Lifecycle = Lifecycle> extends EditorNode<L, 'root'> {
   static rootKey: Key<'root'> = 'root:0'
 
   static get type() {
