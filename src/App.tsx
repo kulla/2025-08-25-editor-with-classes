@@ -1,10 +1,9 @@
-import * as Y from 'yjs'
-
 import './App.css'
 import { useEffect } from 'react'
 import { DebugPanel } from './components/debug-panel'
 import { useEditorState } from './hooks/use-editor-state'
 import { EditorNode, type Lifecycle } from './nodes/editor-node'
+import { TextNode } from './nodes/text'
 import type { Key } from './state/types'
 
 export default function App() {
@@ -41,36 +40,6 @@ export default function App() {
       />
     </main>
   )
-}
-
-declare module './nodes/types' {
-  interface NodeMap {
-    text: {
-      entryValue: Y.Text
-      jsonValue: string
-    }
-  }
-}
-
-class TextNode<L extends Lifecycle = Lifecycle> extends EditorNode<L, 'text'> {
-  static get type() {
-    return 'text' as const
-  }
-
-  create(
-    this: TextNode<'detached'>,
-    jsonValue: string,
-    parentKey: Key,
-  ): Key<'text'> {
-    const value = new Y.Text()
-    value.insert(0, jsonValue)
-
-    return this.state.insert({
-      type: TextNode.type,
-      parentKey,
-      createValue: () => value,
-    })
-  }
 }
 
 declare module './nodes/types' {
