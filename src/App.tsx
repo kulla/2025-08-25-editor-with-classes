@@ -188,9 +188,9 @@ function useEditorState() {
 
 class EditorState implements ReadonlyState {
   private lastKey = -1
-  private ydoc
-  private state
-  private entries
+  private readonly ydoc
+  private readonly state
+  private readonly entries
 
   constructor(ydoc = getSingletonYDoc()) {
     this.ydoc = ydoc
