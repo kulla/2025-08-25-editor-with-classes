@@ -355,10 +355,10 @@ interface WriteableState extends ReadonlyState {
 
 type Entry<T extends NodeType = NodeType> = EntryOf<T>
 type EntryOf<T extends NodeType = NodeType> = {
-  type: T
-  key: Key<T>
-  parentKey: T extends 'root' ? null : Key
-  value: EntryValue<T>
+  readonly type: T
+  readonly key: Key<T>
+  readonly parentKey: T extends 'root' ? null : Key
+  readonly value: EntryValue<T>
 }
 type JSONValue<T extends NodeType> = NodeMap[T]['jsonValue']
 type EntryValue<T extends NodeType> = NodeMap[T]['entryValue']
