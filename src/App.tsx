@@ -14,7 +14,7 @@ export default function App() {
       if (state.has(RootNode.rootKey)) return
 
       state.update((t) => {
-        new RootNode({ lifecycle: 'detached', state: t }).create({
+        new RootNode('detached', t, undefined).create({
           type: 'root',
           text: 'Hello, Rsbuild!',
         })
@@ -42,34 +42,19 @@ export default function App() {
   )
 }
 
-type NodeLifecycle = NodeFields['lifecycle']
-type NodeFields<T extends NodeType = NodeType> =
-  | DetachedFields
-  | { [S in T]: ReadonlyFields<S> }[T]
-  | { [S in T]: WritableFields<S> }[T]
-
-interface DetachedFields {
-  readonly lifecycle: 'detached'
-  readonly state: WriteableState
-}
-
-interface ReadonlyFields<T extends NodeType> {
-  readonly lifecycle: 'readonly'
-  readonly key: Key<T>
-  readonly state: ReadonlyState
-}
-
-interface WritableFields<T extends NodeType> {
-  readonly lifecycle: 'writable'
-  readonly key: Key<T>
-  readonly state: WriteableState
-}
+type NodeLifecycle = 'detached' | 'readonly' | 'writable'
 
 abstract class EditorNode<
   L extends NodeLifecycle = NodeLifecycle,
   T extends NodeType = NodeType,
 > {
-  constructor(protected readonly fields: NodeFields<T> & { lifecycle: L }) {}
+  constructor(
+    public readonly lifecycle: L,
+    protected readonly state: L extends 'readonly'
+      ? ReadonlyState
+      : WriteableState,
+    public readonly key: L extends 'detached' ? undefined : Key<T>,
+  ) {}
 
   static get type(): string {
     throw new Error('Node type not implemented')
@@ -88,17 +73,13 @@ abstract class EditorNode<
     return this.getParentKey()
   }
 
-  get lifecycle() {
-    return this.fields.lifecycle
-  }
-
   get entryValue(): EntryValue<T> {
     invariant(this.isStored(), 'Node is not attached to state')
     return this.getEntry().value
   }
 
   getEntry(this: EditorNode<'readonly' | 'writable', T>): Entry<T> {
-    return this.fields.state.get(this.fields.key)
+    return this.state.get(this.key)
   }
 
   getParentKey(
@@ -147,7 +128,7 @@ class TextNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
     const value = new Y.Text()
     value.insert(0, jsonValue)
 
-    return this.fields.state.insert({
+    return this.state.insert({
       type: TextNode.type,
       parentKey,
       createValue: () => value,
@@ -178,12 +159,12 @@ class RootNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
     this: RootNode<'detached'>,
     jsonValue: { type: 'root'; text: string },
   ) {
-    const value = new TextNode({
-      lifecycle: 'detached',
-      state: this.fields.state,
-    }).create(jsonValue.text, RootNode.rootKey)
+    const value = new TextNode('detached', this.state, undefined).create(
+      jsonValue.text,
+      RootNode.rootKey,
+    )
 
-    return this.fields.state.insertRoot({ key: RootNode.rootKey, value })
+    return this.state.insertRoot({ key: RootNode.rootKey, value })
   }
 }
 
