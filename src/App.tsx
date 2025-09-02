@@ -6,6 +6,7 @@ import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { DebugPanel } from './components/debug-panel'
 import type { EntryValue, JSONValue, NodeType } from './nodes/types'
 import type { Entry, Key, ReadonlyState, WriteableState } from './state/types'
+import { getSingletonYDoc } from './state/ydoc'
 
 export default function App() {
   const { state } = useEditorState()
@@ -161,15 +162,6 @@ class RootNode<L extends Lifecycle = Lifecycle> extends EditorNode<L, 'root'> {
 
     return this.state.insertRoot({ key: RootNode.rootKey, value })
   }
-}
-
-let ydoc: Y.Doc | null = null
-
-function getSingletonYDoc() {
-  if (!ydoc) {
-    ydoc = new Y.Doc()
-  }
-  return ydoc
 }
 
 function useEditorState() {
