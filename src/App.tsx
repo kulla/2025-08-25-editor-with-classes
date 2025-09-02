@@ -65,7 +65,7 @@ interface WritableFields<T extends NodeType> {
   readonly state: WriteableState
 }
 
-abstract class AbstractEditorNode<
+abstract class EditorNode<
   L extends NodeLifecycle = NodeLifecycle,
   T extends NodeType = NodeType,
 > {
@@ -97,29 +97,25 @@ abstract class AbstractEditorNode<
     return this.getEntry().value
   }
 
-  getEntry(this: AbstractEditorNode<'readonly' | 'writable', T>): Entry<T> {
+  getEntry(this: EditorNode<'readonly' | 'writable', T>): Entry<T> {
     return this.fields.state.get(this.fields.key)
   }
 
-  getParentKey(
-    this: AbstractEditorNode<'readonly' | 'writable', T>,
-  ): ParentKey<T> {
+  getParentKey(this: EditorNode<'readonly' | 'writable', T>): ParentKey<T> {
     return this.getEntry().parentKey
   }
 
-  getEntryValue(
-    this: AbstractEditorNode<'readonly' | 'writable', T>,
-  ): EntryValue<T> {
+  getEntryValue(this: EditorNode<'readonly' | 'writable', T>): EntryValue<T> {
     return this.getEntry().value
   }
 
   abstract create(
-    this: AbstractEditorNode<'detached', T>,
+    this: EditorNode<'detached', T>,
     jsonValue: JSONValue<T>,
     parentKey: ParentKey<T>,
   ): Key<T>
 
-  isStored(): this is AbstractEditorNode<'readonly' | 'writable', T> {
+  isStored(): this is EditorNode<'readonly' | 'writable', T> {
     return this.lifecycle !== 'detached'
   }
 }
@@ -134,9 +130,10 @@ declare module './nodes/types' {
   }
 }
 
-class TextNode<
-  L extends NodeLifecycle = NodeLifecycle,
-> extends AbstractEditorNode<L, 'text'> {
+class TextNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
+  L,
+  'text'
+> {
   static get type() {
     return 'text' as const
   }
@@ -167,9 +164,10 @@ declare module './nodes/types' {
   }
 }
 
-class RootNode<
-  L extends NodeLifecycle = NodeLifecycle,
-> extends AbstractEditorNode<L, 'root'> {
+class RootNode<L extends NodeLifecycle = NodeLifecycle> extends EditorNode<
+  L,
+  'root'
+> {
   static rootKey: Key<'root'> = 'root:0'
 
   static get type() {
