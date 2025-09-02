@@ -5,6 +5,7 @@ import { invariant } from 'es-toolkit'
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { DebugPanel } from './components/debug-panel'
 import type { EntryValue, JSONValue, NodeType } from './nodes/types'
+import type { Entry, Key, ReadonlyState, WriteableState } from './state/types'
 
 export default function App() {
   const { state } = useEditorState()
@@ -307,32 +308,3 @@ class Transaction implements WriteableState {
     return key
   }
 }
-
-interface ReadonlyState {
-  get<T extends NodeType>(key: Key<T>): Entry<T>
-}
-
-interface WriteableState extends ReadonlyState {
-  update<T extends NodeType>(
-    key: Key<T>,
-    updateFn: EntryValue<T> | ((v: EntryValue<T>) => EntryValue<T>),
-  ): void
-  insertRoot(params: {
-    key: Key<'root'>
-    value: EntryValue<'root'>
-  }): Key<'root'>
-  insert<T extends Exclude<NodeType, 'root'>>(params: {
-    type: T
-    parentKey: Key
-    createValue: (key: Key<T>) => EntryValue<T>
-  }): Key<T>
-}
-
-type Entry<T extends NodeType = NodeType> = EntryOf<T>
-type EntryOf<T extends NodeType = NodeType> = {
-  readonly type: T
-  readonly key: Key<T>
-  readonly parentKey: T extends 'root' ? null : Key
-  readonly value: EntryValue<T>
-}
-type Key<T extends NodeType = NodeType> = `${T}:${number}`
