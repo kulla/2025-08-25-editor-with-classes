@@ -83,7 +83,7 @@ abstract class EditorNode<
     return Object.getPrototypeOf(this).constructor.type
   }
 
-  get parentKey(): ParentKey<T> {
+  get parentKey(): T extends 'root' ? null : Key {
     invariant(this.isStored(), 'Node is not attached to state')
     return this.getParentKey()
   }
@@ -101,7 +101,9 @@ abstract class EditorNode<
     return this.fields.state.get(this.fields.key)
   }
 
-  getParentKey(this: EditorNode<'readonly' | 'writable', T>): ParentKey<T> {
+  getParentKey(
+    this: EditorNode<'readonly' | 'writable', T>,
+  ): T extends 'root' ? null : Key {
     return this.getEntry().parentKey
   }
 
@@ -112,7 +114,7 @@ abstract class EditorNode<
   abstract create(
     this: EditorNode<'detached', T>,
     jsonValue: JSONValue<T>,
-    parentKey: ParentKey<T>,
+    parentKey: T extends 'root' ? null : Key,
   ): Key<T>
 
   isStored(): this is EditorNode<'readonly' | 'writable', T> {
@@ -124,7 +126,6 @@ declare module './nodes/types' {
   interface NodeMap {
     text: {
       entryValue: Y.Text
-      parentKey: Key
       jsonValue: string
     }
   }
@@ -158,7 +159,6 @@ declare module './nodes/types' {
   interface NodeMap {
     root: {
       entryValue: Key<'text'>
-      parentKey: null
       jsonValue: { type: 'root'; text: string }
     }
   }
@@ -315,13 +315,13 @@ class Transaction implements WriteableState {
     return key
   }
 
-  insert<T extends NodeType>({
+  insert<T extends Exclude<NodeType, 'root'>>({
     type,
     parentKey,
     createValue,
   }: {
     type: T
-    parentKey: ParentKey<T>
+    parentKey: T extends 'root' ? null : Key
     createValue: (key: Key<T>) => EntryValue<T>
   }): Key<T> {
     const key = this.generateKey(type)
@@ -346,20 +346,20 @@ interface WriteableState extends ReadonlyState {
     key: Key<'root'>
     value: EntryValue<'root'>
   }): Key<'root'>
-  insert<T extends NodeType>(params: {
+  insert<T extends Exclude<NodeType, 'root'>>(params: {
     type: T
-    parentKey: ParentKey<T>
+    parentKey: Key
     createValue: (key: Key<T>) => EntryValue<T>
   }): Key<T>
 }
 
-type Entry<T extends NodeType = NodeType> = {
+type Entry<T extends NodeType = NodeType> = EntryOf<T>
+type EntryOf<T extends NodeType = NodeType> = {
   type: T
   key: Key<T>
-  parentKey: ParentKey<T>
+  parentKey: T extends 'root' ? null : Key
   value: EntryValue<T>
 }
 type JSONValue<T extends NodeType> = NodeMap[T]['jsonValue']
 type EntryValue<T extends NodeType> = NodeMap[T]['entryValue']
-type ParentKey<T extends NodeType> = NodeMap[T]['parentKey']
 type Key<T extends NodeType = NodeType> = `${T}:${number}`
