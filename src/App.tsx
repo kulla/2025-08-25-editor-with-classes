@@ -4,7 +4,7 @@ import './App.css'
 import { invariant } from 'es-toolkit'
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { DebugPanel } from './components/debug-panel'
-import type { NodeMap, NodeType } from './nodes/types'
+import type { EntryValue, JSONValue, NodeType } from './nodes/types'
 
 export default function App() {
   const { state } = useEditorState()
@@ -335,6 +335,4 @@ type EntryOf<T extends NodeType = NodeType> = {
   readonly parentKey: T extends 'root' ? null : Key
   readonly value: EntryValue<T>
 }
-type JSONValue<T extends NodeType> = NodeMap[T]['jsonValue']
-type EntryValue<T extends NodeType> = NodeMap[T]['entryValue']
 type Key<T extends NodeType = NodeType> = `${T}:${number}`
