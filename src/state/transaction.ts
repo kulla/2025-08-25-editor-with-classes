@@ -1,4 +1,4 @@
-import { RootNode } from '../App'
+import { RootNode } from '../nodes/root'
 import type { EntryValue, NodeType } from '../nodes/types'
 import type { Entry, Key, WriteableState } from './types'
 
