@@ -13,7 +13,7 @@ export interface WriteableState extends ReadonlyState {
     key: Key<'root'>
     value: EntryValue<'root'>
   }): Key<'root'>
-  insert<T extends Exclude<NodeType, 'root'>>(params: {
+  insert<T extends NodeType>(params: {
     type: T
     parentKey: Key
     createValue: (key: Key<T>) => EntryValue<T>
@@ -24,7 +24,7 @@ export type Entry<T extends NodeType = NodeType> = EntryOf<T>
 type EntryOf<T extends NodeType = NodeType> = {
   readonly type: T
   readonly key: Key<T>
-  readonly parentKey: T extends 'root' ? null : Key
+  readonly parentKey: Key | null
   readonly value: EntryValue<T>
 }
 

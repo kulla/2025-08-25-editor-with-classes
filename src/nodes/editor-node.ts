@@ -4,6 +4,15 @@ import type { EntryValue, JSONValue, NodeType } from './types'
 
 export type Lifecycle = 'detached' | 'readonly' | 'writable'
 
+export type EditorNodeConstructor<
+  L extends Lifecycle = Lifecycle,
+  T extends NodeType = NodeType,
+> = new (
+  lifecycle: L,
+  state: L extends 'readonly' ? ReadonlyState : WriteableState,
+  key: L extends 'detached' ? undefined : Key<T>,
+) => EditorNode<L, T>
+
 export abstract class EditorNode<
   L extends Lifecycle = Lifecycle,
   T extends NodeType = NodeType,
@@ -28,7 +37,7 @@ export abstract class EditorNode<
     return Object.getPrototypeOf(this).constructor.type
   }
 
-  get parentKey(): T extends 'root' ? null : Key {
+  get parentKey(): Key | null {
     invariant(this.isStored(), 'Node is not attached to state')
     return this.getParentKey()
   }
@@ -42,9 +51,7 @@ export abstract class EditorNode<
     return this.state.get(this.key)
   }
 
-  getParentKey(
-    this: EditorNode<'readonly' | 'writable', T>,
-  ): T extends 'root' ? null : Key {
+  getParentKey(this: EditorNode<'readonly' | 'writable', T>): Key | null {
     return this.getEntry().parentKey
   }
 
@@ -55,7 +62,7 @@ export abstract class EditorNode<
   abstract create(
     this: EditorNode<'detached', T>,
     jsonValue: JSONValue<T>,
-    parentKey: T extends 'root' ? null : Key,
+    parentKey: Key | null,
   ): Key<T>
 
   isStored(): this is EditorNode<'readonly' | 'writable', T> {
